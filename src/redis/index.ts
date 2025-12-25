@@ -1,10 +1,14 @@
 import { RedisClient } from 'redis';
 import { NotificationJobSchema, NotificationJob } from '../types/schemas';
 
-export const redisClient = new RedisClient({
+const redisOptions = {
     host: process.env.REDIS_HOST || 'redis',
-    port: Number(process.env.REDIS_PORT) || 6379
-});
+    port: Number(process.env.REDIS_PORT) || 6379,
+};
+if (process.env.REDIS_PASSWORD) redisOptions.password = process.env.REDIS_PASSWORD;
+if (process.env.REDIS_USER) redisOptions.username = process.env.REDIS_USER;
+
+export const redisClient = new RedisClient(redisOptions);
 redisClient.on('error', (err: unknown) => console.warn('Redis client error', err));
 
 // Simple per-user ephemeral state helpers (store JSON)
