@@ -79,12 +79,12 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
       await page.waitForTimeout(3000);
     } catch {}
 
-    const hasCard = await page.evaluate(
+    const isAvailable = await page.evaluate(
       () => !!document.querySelector(".BadgeTrainLabels")
     );
     await page.close();
     await context.close();
-    return !hasCard;
+    return isAvailable;
   } catch (err) {
     try {
       await page.close();
