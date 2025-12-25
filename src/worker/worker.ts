@@ -124,7 +124,8 @@ const trackLinks = async (userId: string | number) => {
     }
     // persist last check
     try {
-      await (await import("../db")).markLinkChecked(linkId, hasTickets);
+      const isNotAvailable = !hasTickets;
+      await (await import("../db")).markLinkChecked(linkId, isNotAvailable);
     } catch (err) {
       console.warn("Failed to mark link checked", linkId, err);
     }
