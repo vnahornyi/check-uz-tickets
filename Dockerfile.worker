@@ -13,7 +13,3 @@ RUN npx playwright install --with-deps
 
 # Copy sources and build
 COPY . .
-RUN npm run build
-
-# Worker listens on its own port only for debug; run compiled worker
-CMD ["npm", "run", "worker"]
