@@ -1,38 +1,78 @@
-# check-uz-tickets
+check-uz-tickets
 
-Minimal instructions to install and run this project.
+A small Telegram bot and background worker that monitors booking.uz search pages for ticket availability and notifies users when tickets appear.
 
-Prerequisites
-- Node.js (v18 or newer recommended)
-- npm (comes with Node.js)
+## Features
 
-Install
-1. Install dependencies:
+ Add and manage booking.uz search URLs to monitor (per Telegram user).
+ Periodic scanning via Playwright (headless Chromium) run by a worker.
+ Redis + Bull queue for notifications and worker triggers.
+ PostgreSQL to persist users and tracked links; migrations supported via MikroORM.
+ Per-link cooldown when a user marks a link "absent" to skip checks for a configurable period.
 
-	npm install
+## Project Structure
 
-2. Install Playwright browsers (required for Playwright to run):
+```
+check-uz-tickets
+├── src
+│   ├── bot
+│   │   ├── index.ts                # Entry point for the Telegram bot
+│   │   ├── commands
+│   │   │   ├── addLink.ts          # Command to add a tracking link
+│   │   │   ├── removeLink.ts       # Command to remove a tracking link
+│   │   │   └── listLinks.ts        # Command to list all tracking links
+│   │   └── notifications.ts         # Notification handling
+│   ├── worker
+│   │   └── worker.js                # Logic for tracking links
+│   ├── db
+│   │   ├── index.ts                 # Database operations
+│   │   └── migrations
+│   │       └── 001_create_tables.sql # Migration script for database tables
+│   ├── queue
+│   │   └── index.ts                 # Queue management
+│   ├── redis
+│   │   └── index.ts                 # Redis interactions
+│   └── types
+│       └── index.ts                 # TypeScript interfaces and types
+├── package.json                      # npm configuration
+├── tsconfig.json                    # TypeScript configuration
+└── README.md                        # Project documentation
+```
 
-	npx playwright install
+## Setup Instructions
 
-Run
-- Start the app:
+1. Clone the repository:
+   ```
+   git clone https://github.com/vnahornyi/check-uz-tickets.git
+   cd check-uz-tickets
+   ```
 
-  npm start
+2. Install dependencies:
+   ```
+   npm install
+   ```
 
-  or
+3. Set up the PostgreSQL database:
+   - Create a database and update the connection settings in `src/db/index.ts`.
+   - Run the migration script to create necessary tables:
+     ```
+     psql -U your_username -d your_database -f src/db/migrations/001_create_tables.sql
+     ```
 
-  node index.mjs
+4. Configure the Telegram bot:
+   - Create a new bot using BotFather on Telegram and obtain the bot token.
+   - Update the bot token in `src/bot/index.ts`.
 
-Notes
-- The project uses Playwright (see `package.json`). Ensure the browsers are installed with `npx playwright install` before running.
-- If you run into permission or dependency issues on some platforms, try `npx playwright install --with-deps`.
+5. Start the bot:
+   ```
+   npm run start
+   ```
 
-Replace monitored URL
-- Open the file `index.mjs` and replace the value of the `URL` constant near the top of the file with the page you want to monitor. For example:
+## Usage
 
-  const URL = "https://booking.uz.gov.ua/search-trips/FROM/TO/list?startDate=YYYY-MM-DD";
+- Users can interact with the bot to add, remove, or list their tracking links.
+- The bot will send notifications when tickets are found based on the tracking links provided.
 
-- The current default URL is set for demonstration; update it before running the watcher.
+## Contributing
 
-If you want, I can add more details (environment variables, example usage, or a `start` script tweak).
+Contributions are welcome! Please open an issue or submit a pull request for any enhancements or bug fixes.
