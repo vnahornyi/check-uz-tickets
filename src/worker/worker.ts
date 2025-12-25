@@ -10,8 +10,7 @@ import { createClient } from 'redis';
 
 // subscriber client is `redisClient` (from shared module) — create a separate publisher client
 const pubClient = createClient({
-  host: process.env.REDIS_HOST || 'redis',
-  port: Number(process.env.REDIS_PORT) || 6379,
+  url: process.env.REDIS_URL,
 });
 pubClient.on('error', (err: unknown) => console.warn('Redis publisher error', err));
 

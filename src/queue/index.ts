@@ -2,14 +2,7 @@ import Queue, { Job } from 'bull';
 import { sendNotification } from '../bot/notifications';
 import { NotificationJobSchema, NotificationJob } from '../types/schemas';
 
-const queueRedisOpts = {
-  host: process.env.REDIS_HOST || 'redis',
-  port: Number(process.env.REDIS_PORT) || 6379,
-};
-if (process.env.REDIS_PASSWORD) queueRedisOpts.password = process.env.REDIS_PASSWORD;
-if (process.env.REDIS_USER) queueRedisOpts.username = process.env.REDIS_USER;
-
-export const notificationQueue = new Queue('notificationQueue', { redis: queueRedisOpts });
+export const notificationQueue = new Queue('notificationQueue', process.env.REDIS_URL);
 
 // Process notifications from the queue
 notificationQueue.process(async (job: { data: NotificationJob }) => {
