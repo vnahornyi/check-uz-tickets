@@ -179,7 +179,7 @@ bot.on("callback_query", async (ctx: Context) => {
         const cooldownMinutes =
           Number(process.env.ABSENT_COOLDOWN_MINUTES) || 5; // default 5 minutes
         const res = await pool.query(
-          "UPDATE tracking_links SET notified = false, ignore_until = NOW() + ($2)::interval WHERE id = $1 RETURNING id, link, notified, last_status, last_checked_at, ignore_until",
+          "UPDATE tracking_links SET notified = false, last_status = true, last_checked_at = NOW(), ignore_until = NOW() + ($2)::interval WHERE id = $1 RETURNING id, link, notified, last_status, last_checked_at, ignore_until",
           [id, `${cooldownMinutes} minutes`]
         );
         if (res.rows.length === 0) {
