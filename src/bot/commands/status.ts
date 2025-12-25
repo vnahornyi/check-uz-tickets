@@ -52,7 +52,7 @@ export const statusCommand = async (ctx: Context) => {
                 if (links.length > 0) {
                     text += `\n\nВаші посилання:\n`;
                     for (const l of links) {
-                        const statusEmoji = l.last_status === null ? '⏳' : l.last_status ? '❌' : '✅';
+                        const statusEmoji = l.last_status === null ? '⏳' : l.last_status ? '✅' : '❌';
                         const notifiedLabel = l.notified ? '🔔' : '';
                         const lastChecked = l.last_checked_at ? ` (перевірено: ${new Date(l.last_checked_at).toLocaleString()})` : '';
                         text += `${statusEmoji} ${l.link} ${notifiedLabel}${lastChecked}\n`;

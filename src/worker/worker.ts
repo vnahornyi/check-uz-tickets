@@ -42,7 +42,7 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     locale: "uk-UA",
-    viewport: { width: 1280, height: 800 },
+    viewport: { width: 1920, height: 1080 },
   });
   const page = await context.newPage();
 
@@ -124,8 +124,7 @@ const trackLinks = async (userId: string | number) => {
     }
     // persist last check
     try {
-      const isNotAvailable = !hasTickets;
-      await (await import("../db")).markLinkChecked(linkId, isNotAvailable);
+      await (await import("../db")).markLinkChecked(linkId, hasTickets);
     } catch (err) {
       console.warn("Failed to mark link checked", linkId, err);
     }
