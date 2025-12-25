@@ -9,7 +9,7 @@
     "worker": "node dist/worker/worker.js",
     "dev": "ts-node-dev --respawn --transpile-only src/bot/index.ts",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/worker/worker.ts",
-    "predeploy:worker": "npx playwright install && npx playwright install-deps",
+    "predeploy:worker": "npx playwright install --with-deps",
     "predeploy:app": "npm run migrate",
     "migrate": "ts-node src/db/migrate.ts",
     "tsc": "tsc --noEmit"
