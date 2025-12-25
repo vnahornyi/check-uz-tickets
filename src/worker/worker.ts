@@ -6,13 +6,15 @@ import { getUserLinks } from "../db/index";
 import { TrackMessageSchema } from "../types/schemas";
 import { chromium, Browser } from "playwright";
 import { redisClient } from "../redis/index";
-import { createClient } from 'redis';
+import { createClient } from "redis";
 
 // subscriber client is `redisClient` (from shared module) — create a separate publisher client
 const pubClient = createClient({
   url: process.env.REDIS_URL,
 });
-pubClient.on('error', (err: unknown) => console.warn('Redis publisher error', err));
+pubClient.on("error", (err: unknown) =>
+  console.warn("Redis publisher error", err)
+);
 
 const pgClient = new PgClient({
   connectionString: process.env.DATABASE_URL,
@@ -35,7 +37,6 @@ const getBrowser = async () => {
 };
 
 const checkTicketAvailability = async (link: string): Promise<boolean> => {
-  // Return true if EmptyState present (no tickets), false if tickets found
   const browser = await getBrowser();
   const context = await browser.newContext({
     userAgent:
@@ -78,12 +79,12 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
       await page.waitForTimeout(1500);
     } catch {}
 
-    const hasEmpty = await page.evaluate(
-      () => !!document.querySelector(".EmptyState")
+    const hasCard = await page.evaluate(
+      () => !!document.querySelector(".Card")
     );
     await page.close();
     await context.close();
-    return hasEmpty;
+    return !hasCard;
   } catch (err) {
     try {
       await page.close();
@@ -103,7 +104,7 @@ const logRetry = (
   attempt: number,
   result: boolean
 ) => {
-  const logMsg = `[${new Date().toISOString()}] userId=${userId} link=${link} attempt=${attempt} EmptyState=${result}\n`;
+  const logMsg = `[${new Date().toISOString()}] userId=${userId} link=${link} attempt=${attempt} HasCard=${result}\n`;
   fs.appendFileSync(path.join(__dirname, "retry_audit.log"), logMsg);
 };
 
@@ -115,27 +116,27 @@ const trackLinks = async (userId: string | number) => {
     const link = l.link;
     // skip already-notified
     if (l.notified) continue;
-    let emptyState = true;
+    let hasTickets = true;
     for (let attempt = 1; attempt <= 3; attempt++) {
-      emptyState = await checkTicketAvailability(link);
-      logRetry(userId, link, attempt, emptyState);
+      hasTickets = await checkTicketAvailability(link);
+      logRetry(userId, link, attempt, hasTickets);
       if (attempt < 3) await sleep(3000);
     }
     // persist last check
     try {
-      await (await import('../db')).markLinkChecked(linkId, emptyState);
+      await (await import("../db")).markLinkChecked(linkId, hasTickets);
     } catch (err) {
-      console.warn('Failed to mark link checked', linkId, err);
+      console.warn("Failed to mark link checked", linkId, err);
     }
-    if (!emptyState) {
+    if (hasTickets) {
       addNotificationToQueue(
         userId.toString(),
         `🎟️ Квитки знайдено для вашого посилання: ${link} \nПеревірте сайт!`
       );
       try {
-        await (await import('../db')).markLinkNotified(linkId);
+        await (await import("../db")).markLinkNotified(linkId);
       } catch (err) {
-        console.warn('Failed to mark link notified', linkId, err);
+        console.warn("Failed to mark link notified", linkId, err);
       }
     }
   }
@@ -158,7 +159,8 @@ startTracking();
 
 // Periodic scanner: every N seconds publish a `trackLinks` message for each user
 // Default to 3 minutes (180 seconds) between periodic scans
-const TRACK_INTERVAL_SECONDS = Number(process.env.TRACK_INTERVAL_SECONDS) || 180;
+const TRACK_INTERVAL_SECONDS =
+  Number(process.env.TRACK_INTERVAL_SECONDS) || 180;
 
 const schedulePeriodicScan = () => {
   const run = async () => {
@@ -168,28 +170,32 @@ const schedulePeriodicScan = () => {
         `UPDATE tracking_links SET notified = false WHERE notified = true AND last_checked_at IS NOT NULL AND last_checked_at < NOW() - INTERVAL '${resetHours} hours'`
       );
       if (resetRes.rowCount && resetRes.rowCount > 0) {
-        console.log(`Reset notified flag for ${resetRes.rowCount} links older than ${resetHours} hours`);
+        console.log(
+          `Reset notified flag for ${resetRes.rowCount} links older than ${resetHours} hours`
+        );
       }
     } catch (err) {
-      console.warn('Failed to reset notified flags', err);
+      console.warn("Failed to reset notified flags", err);
     }
 
     try {
       const res = await pgClient.query(
-        'SELECT DISTINCT u.telegram_id FROM users u JOIN tracking_links t ON t.user_id = u.id'
+        "SELECT DISTINCT u.telegram_id FROM users u JOIN tracking_links t ON t.user_id = u.id"
       );
       if (res.rows.length === 0) return;
-      console.log(`Periodic scan: publishing trackLinks for ${res.rows.length} users`);
+      console.log(
+        `Periodic scan: publishing trackLinks for ${res.rows.length} users`
+      );
       for (const row of res.rows) {
         const userId = row.telegram_id;
         try {
-          pubClient.publish('trackLinks', JSON.stringify({ userId }));
+          pubClient.publish("trackLinks", JSON.stringify({ userId }));
         } catch (err) {
-          console.warn('Failed to publish trackLinks for user', userId, err);
+          console.warn("Failed to publish trackLinks for user", userId, err);
         }
       }
     } catch (err) {
-      console.error('Periodic scan error', err);
+      console.error("Periodic scan error", err);
     }
   };
 
