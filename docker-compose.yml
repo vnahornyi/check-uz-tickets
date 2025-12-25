@@ -46,7 +46,9 @@ services:
       - redis
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     volumes:
       - ./:/usr/src/app
       - /usr/src/app/node_modules
@@ -60,7 +62,9 @@ services:
     command: ["/bin/sh", "-c", "npm run predeploy:app && npm run dev"]
 
   worker:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     volumes:
       - ./:/usr/src/app
       - /usr/src/app/node_modules
