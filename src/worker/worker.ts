@@ -24,20 +24,8 @@ pgClient.connect();
 
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-interface UserLink {
-  link: string;
-}
-
-let sharedBrowser: Browser | null = null;
-const getBrowser = async () => {
-  if (!sharedBrowser) {
-    sharedBrowser = await chromium.launch({ headless: true });
-  }
-  return sharedBrowser;
-};
-
 const checkTicketAvailability = async (link: string): Promise<boolean> => {
-  const browser = await getBrowser();
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent:
       "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -47,43 +35,29 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
   const page = await context.newPage();
 
   try {
-    // Try navigation with a few attempts to handle transient failures
     const maxNavAttempts = 3;
-    let lastErr: any = null;
-    let response = null;
     for (let i = 1; i <= maxNavAttempts; i++) {
       try {
-        response = await page.goto(link, {
+        await page.goto(link, {
           waitUntil: "domcontentloaded",
           timeout: 120_000,
         });
-        lastErr = null;
         break;
       } catch (e) {
-        lastErr = e;
-
-        if (e instanceof Error) {
-          console.warn(
-            `nav attempt ${i} failed for ${link}:`,
-            e && e.message ? e.message : e
-          );
-        }
-
-        if (i < maxNavAttempts)
-          await new Promise((r) => setTimeout(r, 2000 * i));
+        if (i < maxNavAttempts) await sleep(2000);
+        else throw e;
       }
     }
 
-    // give client-side scripts a moment
-    try {
-      await page.waitForTimeout(3000);
-    } catch {}
+    await page.waitForTimeout(3000);
 
     const isAvailable = await page.evaluate(
       () => !!document.querySelector(".BadgeTrainLabels")
     );
     await page.close();
     await context.close();
+    await browser.close();
+
     return isAvailable;
   } catch (err) {
     try {
@@ -94,7 +68,7 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
     } catch (_) {}
     console.error("checkTicketAvailability error for", link, err);
     // on error, conservatively treat as empty (no tickets)
-    return true;
+    return false;
   }
 };
 
@@ -114,25 +88,28 @@ const trackLinks = async (userId: string | number) => {
   for (const l of links) {
     const linkId = l.id;
     const link = l.link;
-    // skip already-notified
-    if (l.notified) continue;
-    let hasTickets = false;
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      hasTickets = await checkTicketAvailability(link);
-      logRetry(userId, link, attempt, hasTickets);
-      if (attempt < 3) await sleep(3000);
-    }
+
+    let hasTickets = Boolean(l.last_status);
+    hasTickets = await checkTicketAvailability(link);
+    logRetry(userId, link, 1, hasTickets);
     // persist last check
     try {
       await (await import("../db")).markLinkChecked(linkId, hasTickets);
     } catch (err) {
       console.warn("Failed to mark link checked", linkId, err);
     }
-    if (hasTickets) {
-      addNotificationToQueue(
-        userId.toString(),
-        `🎟️ Квитки знайдено для вашого посилання: ${link} \nПеревірте сайт!`
-      );
+    if (hasTickets && !l.notified) {
+      try {
+        addNotificationToQueue(
+          userId.toString(),
+          `🎟️ Квитки знайдено для вашого посилання: ${link} \nПеревірте сайт!`
+        );
+        console.log(
+          `Enqueued notification for user=${userId} linkId=${linkId}`
+        );
+      } catch (err) {
+        console.warn("Failed to enqueue notification for", userId, linkId, err);
+      }
       try {
         await (await import("../db")).markLinkNotified(linkId);
       } catch (err) {

@@ -97,12 +97,24 @@ export const getUserLinks = async (userId: string | number, includeNotified = tr
 
 export const markLinkChecked = async (linkId: number, lastStatus: boolean) => {
     const query = 'UPDATE tracking_links SET last_status = $1, last_checked_at = NOW() WHERE id = $2';
-    await pool.query(query, [lastStatus, linkId]);
+    try {
+        await pool.query(query, [lastStatus, linkId]);
+        console.log('markLinkChecked updated', { linkId, lastStatus });
+    } catch (err) {
+        console.error('markLinkChecked failed', { linkId, lastStatus, err });
+        throw err;
+    }
 };
 
 export const markLinkNotified = async (linkId: number) => {
     const query = 'UPDATE tracking_links SET notified = true WHERE id = $1';
-    await pool.query(query, [linkId]);
+    try {
+        await pool.query(query, [linkId]);
+        console.log('markLinkNotified updated', { linkId });
+    } catch (err) {
+        console.error('markLinkNotified failed', { linkId, err });
+        throw err;
+    }
 };
 
 export const disconnect = async (): Promise<void> => {

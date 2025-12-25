@@ -10,6 +10,7 @@
     "dev": "ts-node-dev --respawn --transpile-only src/bot/index.ts",
     "dev:worker": "ts-node-dev --respawn --transpile-only src/worker/worker.ts",
     "predeploy:worker": "npx playwright install --with-deps",
+    "check:availability": "ts-node src/scripts/checkAvailability.ts",
     "predeploy:app": "npm run migrate",
     "migrate": "ts-node src/db/migrate.ts",
     "tsc": "tsc --noEmit"
