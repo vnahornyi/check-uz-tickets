@@ -1,12 +1,8 @@
-FROM mcr.microsoft.com/playwright:latest
+FROM mcr.microsoft.com/playwright/node:v1.42.1-jammy
 
-WORKDIR /usr/src/app
-
-# Copy package files first for better Docker layer caching
+WORKDIR /app
 COPY package*.json ./
-
-# Install all deps (needed to run the build step which requires dev deps)
-RUN npm ci
-
-# Copy sources and build
+RUN npm install
 COPY . .
+
+CMD ["npm", "run", "worker"]
