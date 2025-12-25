@@ -1,0 +1,19 @@
+FROM mcr.microsoft.com/playwright:latest
+
+WORKDIR /usr/src/app
+
+# Copy package files first for better Docker layer caching
+COPY package*.json ./
+
+# Install all deps (needed to run the build step which requires dev deps)
+RUN npm ci
+
+# Ensure Playwright browsers and system deps are installed
+RUN npx playwright install --with-deps
+
+# Copy sources and build
+COPY . .
+RUN npm run build
+
+# Worker listens on its own port only for debug; run compiled worker
+CMD ["npm", "run", "worker"]
