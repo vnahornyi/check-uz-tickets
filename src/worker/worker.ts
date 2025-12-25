@@ -80,7 +80,7 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
     } catch {}
 
     const hasCard = await page.evaluate(
-      () => !!document.querySelector(".Card")
+      () => !!document.querySelector(".BadgeTrainLabels")
     );
     await page.close();
     await context.close();
