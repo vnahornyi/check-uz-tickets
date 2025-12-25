@@ -76,7 +76,7 @@ const checkTicketAvailability = async (link: string): Promise<boolean> => {
 
     // give client-side scripts a moment
     try {
-      await page.waitForTimeout(1500);
+      await page.waitForTimeout(3000);
     } catch {}
 
     const hasCard = await page.evaluate(
@@ -116,7 +116,7 @@ const trackLinks = async (userId: string | number) => {
     const link = l.link;
     // skip already-notified
     if (l.notified) continue;
-    let hasTickets = true;
+    let hasTickets = false;
     for (let attempt = 1; attempt <= 3; attempt++) {
       hasTickets = await checkTicketAvailability(link);
       logRetry(userId, link, attempt, hasTickets);
