@@ -17,6 +17,18 @@ const showMainMenu = async (ctx: Context) => {
     await ctx.replyWithHTML('Головне меню', { reply_markup: mainMenuKeyboard() } as any);
 };
 
+// Safely answer callback queries — ignore "query is too old" errors
+const safeAnswerCbQuery = async (ctx: any, text?: string, opts?: any) => {
+    try {
+        await ctx.answerCbQuery(text, opts);
+    } catch (err: any) {
+        if (err && typeof err.message === 'string' && /query is too old/i.test(err.message)) {
+            return;
+        }
+        console.warn('answerCallbackQuery failed', err);
+    }
+};
+
 bot.command('addlink', (ctx: Context) => {
     const parts = (ctx.message && 'text' in ctx.message) ? ctx.message.text.split(' ') : [];
     const link = parts[1];
@@ -41,34 +53,34 @@ bot.on('callback_query', async (ctx: Context, next: () => Promise<any>) => {
     try {
         if (data === 'menu:main') {
             await showMainMenu(ctx);
-            await ctx.answerCbQuery();
+                await safeAnswerCbQuery(ctx);
             return;
         }
         if (data === 'menu:add') {
             const userId = ctx.from?.id;
             if (!userId) return await ctx.answerCbQuery('Не вдалось визначити користувача');
             await addLink(ctx, ''); // prompts interactive flow
-            await ctx.answerCbQuery();
+                await safeAnswerCbQuery(ctx);
             return;
         }
         if (data === 'menu:list') {
             await listLinksCommand(ctx);
-            await ctx.answerCbQuery();
+                await safeAnswerCbQuery(ctx);
             return;
         }
         if (data === 'menu:help') {
             await ctx.reply('ℹ️ Довідка:\n- Додати посилання: додати нове посилання для відстеження\n- Список посилань: керувати вашими посиланнями');
-            await ctx.answerCbQuery();
+                await safeAnswerCbQuery(ctx);
             return;
         }
-        // Not a menu action — pass to next handler (e.g. per-link callbacks)
+                    await safeAnswerCbQuery(ctx, 'Не вдалося видалити посилання', { show_alert: true });
         await next();
     } catch (err) {
         console.error('Callback handling error', err);
     }
 });
 
-// Handle plain text messages: accept links or continue interactive flow
+                    await safeAnswerCbQuery(ctx, 'Посилання не знайдено', { show_alert: true });
 bot.on('text', async (ctx: Context) => {
     const text = ctx.message && 'text' in ctx.message ? ctx.message.text.trim() : '';
     const userId = ctx.from?.id;
@@ -82,7 +94,7 @@ bot.on('text', async (ctx: Context) => {
         await addLink(ctx, text);
         return;
     }
-    // If user just sends a URL without entering add flow, treat as add
+                await safeAnswerCbQuery(ctx, 'Запит на перевірку надіслано');
     if (text && urlPattern.test(text)) {
         await addLink(ctx, text);
         return;
@@ -93,7 +105,7 @@ bot.on('text', async (ctx: Context) => {
 bot.on('callback_query', async (ctx: Context) => {
     const data = ctx.callbackQuery && 'data' in ctx.callbackQuery ? ctx.callbackQuery.data : null;
     if (!data) return;
-    try {
+                        await safeAnswerCbQuery(ctx, 'Посилання не знайдено', { show_alert: true });
         if (data.startsWith('remove:')) {
             const id = Number(data.split(':')[1]);
             const { removeLinkById } = await import('../db');
@@ -109,10 +121,10 @@ bot.on('callback_query', async (ctx: Context) => {
         } else if (data.startsWith('check:')) {
             const id = Number(data.split(':')[1]);
             // publish a direct track request for this user+link
-            const { pool } = await import('../db');
+                    await safeAnswerCbQuery(ctx, 'Посилання позначено як відсутнє');
             // fetch link and user
             const res = await pool.query('SELECT t.link, u.telegram_id FROM tracking_links t JOIN users u ON t.user_id = u.id WHERE t.id = $1', [id]);
-            if (res.rows.length === 0) {
+                    await safeAnswerCbQuery(ctx, 'Не вдалося позначити посилання', { show_alert: true });
                 await ctx.answerCbQuery('Посилання не знайдено', { show_alert: true });
                 return;
             }
